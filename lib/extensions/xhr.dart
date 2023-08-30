@@ -198,9 +198,15 @@ XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
 };
 XMLHttpRequest.prototype.getAllResponseHeaders = function() {
   var ret = "";
-  for (var i = 0; i < this._responseHeaders.length; i++) {
-    var keyValue = this._responseHeaders[i];
-    ret += keyValue[0] + ": " + keyValue[1] + "\\r\\n";
+  var headers = this._responseHeaders;
+  if(typeof headers === 'string') {
+    headers = JSON.parse(headers);
+  }
+  for (var i = 0; i < headers.length; i++) {
+    var keyValue = headers[i];
+    if (keyValue[0] !== name) continue;
+    if (ret === "") ret += ", ";
+    ret += keyValue[1];
   }
   return ret;
 };
