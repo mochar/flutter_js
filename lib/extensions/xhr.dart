@@ -204,8 +204,6 @@ XMLHttpRequest.prototype.getAllResponseHeaders = function() {
   }
   for (var i = 0; i < headers.length; i++) {
     var keyValue = headers[i];
-    if (keyValue[0] !== name) continue;
-    if (ret === "") ret += ", ";
     ret += keyValue[1];
   }
   return ret;
