@@ -201,23 +201,19 @@ XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
 XMLHttpRequest.prototype.getAllResponseHeaders = function() {
   var ret = "";
   var headers = this._responseHeaders;
-  if(typeof headers === 'string') {
-    headers = JSON.parse(headers);
+  if(typeof this._responseHeaders === 'string') {
+    headers = JSON.parse(this._responseHeaders)
   }
-  for (var i = 0; i < headers.length; i++) {
+  for (let i = 0; i < headers.length; i++) {
     var keyValue = headers[i];
-    ret += keyValue[1];
+    ret += keyValue[0] + ": " + keyValue[1] + "\\r\\n";
   }
   return ret;
 };
 XMLHttpRequest.prototype.getResponseHeader = function(name) {
   var ret = "";
-  var headers = this._responseHeaders;
-  if(typeof headers === 'string') {
-    headers = JSON.parse(headers);
-  }
-  for (var i = 0; i < headers.length; i++) {
-    var keyValue = headers[i];
+  for (var i = 0; i < this._responseHeaders.length; i++) {
+    var keyValue = this._responseHeaders[i];
     if (keyValue[0] !== name) continue;
     if (ret === "") ret += ", ";
     ret += keyValue[1];
