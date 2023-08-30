@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 
 /*
  * Based on bits and pieces from different OSS sources
@@ -267,6 +269,13 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
     httpClient = httpClient ?? http.Client();
     dartContext[XHR_PENDING_CALLS_KEY] = [];
 
+    var cli = HttpClient();
+    // cli.findProxy = (uri) {
+    //   return "PROXY 192.168.31.114:7890";
+    // };
+    // cli.findProxy = HttpClient.findProxyFromEnvironment;
+
+    httpClient = IOClient(cli);
     Timer.periodic(Duration(milliseconds: 40), (timer) {
       // exits if there is no pending call to remote
       if (!hasPendingXhrCalls()) return;
