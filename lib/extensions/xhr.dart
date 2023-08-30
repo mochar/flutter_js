@@ -341,6 +341,10 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
               XhtmlHttpResponseInfo(statusCode: 200, statusText: "OK"),
         );
 
+        response.headers.forEach((key, value) {
+          xhrResult.responseInfo?.addResponseHeaders(key, value);
+        });
+
         final responseInfo = jsonEncode(xhrResult.responseInfo);
         //final responseText = xhrResult.responseText; //.replaceAll("\\n", "\\\n");
         final error = xhrResult.error;
