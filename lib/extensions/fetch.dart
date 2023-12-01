@@ -18,6 +18,14 @@ extension JavascriptRuntimeFetchExtension on JavascriptRuntime {
     debug('Eval Fetch Result: $evalFetchResult');
     return this;
   }
+
+  Future<JavascriptRuntime> enableBigInt() async {
+    final polyfill =
+        await rootBundle.loadString('packages/flutter_js/assets/js/bigint.js');
+    final evalFetchResult = evaluate(polyfill);
+    debug('Eval BigInt Result: $evalFetchResult');
+    return this;
+  }
 }
 
 void debug(String message) {

@@ -27,6 +27,7 @@ export 'quickjs-sync-server/quickjs_oasis_jsbridge.dart';
 JavascriptRuntime getJavascriptRuntime({
   bool forceJavascriptCoreOnAndroid = false,
   bool xhr = true,
+  bool bigint = true,
   Map<String, dynamic>? extraArgs = const {},
 }) {
   JavascriptRuntime runtime;
@@ -45,6 +46,7 @@ JavascriptRuntime getJavascriptRuntime({
     runtime = JavascriptCoreRuntime();
   }
   if (xhr) runtime.enableFetch();
+  if (bigint) runtime.enableBigInt();
   runtime.enableHandlePromises();
   return runtime;
 }
