@@ -1379,7 +1379,7 @@ var BigInt = (function (undefined) {
             text += (new Array(exp + 1)).join("0");
             v = text;
         }
-        var isValid = /^([0-9][0-9]*)\$/.test(v);
+        var isValid = /^([0-9][0-9]*)$/.test(v);
         if (!isValid) throw new Error("Invalid integer: " + v);
         if (supportsNativeBigInt) {
             return new NativeBigInt(BigInt(sign ? "-" + v : v));
