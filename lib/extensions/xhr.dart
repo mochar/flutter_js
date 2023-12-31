@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
@@ -265,13 +266,13 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
     httpClient = httpClient ?? http.Client();
     dartContext[XHR_PENDING_CALLS_KEY] = [];
 
-    var cli = HttpClient();
+    // var cli = HttpClient();
     // cli.findProxy = (uri) {
     //   return "PROXY 192.168.31.114:7890";
     // };
     // cli.findProxy = HttpClient.findProxyFromEnvironment;
 
-    httpClient = IOClient(cli);
+    // httpClient = IOClient(cli);
     Timer.periodic(Duration(milliseconds: 40), (timer) {
       // exits if there is no pending call to remote
       if (!hasPendingXhrCalls()) return;
@@ -337,13 +338,14 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
         }
         // assuming request was successfully executed
         String responseText = utf8.decode(response.bodyBytes);
-        try {
-          responseText = jsonEncode(json.decode(responseText));
-        } on Exception {}
+        // try {
+        //   responseText = jsonEncode(json.decode(responseText));
+        // } on Exception {}
         final xhrResult = XmlHttpRequestResponse(
           responseText: responseText,
           responseInfo:
-              XhtmlHttpResponseInfo(statusCode: 200, statusText: "OK"),
+              XhtmlHttpResponseInfo(statusCode: response.statusCode, 
+                statusText: response.reasonPhrase),
         );
 
         response.headers.forEach((key, value) {
@@ -355,9 +357,16 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
         final error = xhrResult.error;
         // send back to the javascript environment the
         // response for the http pending callback
-        this.evaluate(
-          "globalThis.xhrRequests[${pendingCall.idRequest}].callback($responseInfo, `$responseText`, $error);",
+        developer.log('''
+        Got response for ${response.request?.url}
+          - id: ${pendingCall.idRequest}
+          - status code: ${response.statusCode}
+          - error: $error
+        ''', name: 'xhr');
+        final r = this.evaluate(
+          "globalThis.xhrRequests[${pendingCall.idRequest}].callback($responseInfo, ${jsonEncode(responseText)}, $error);",
         );
+        developer.log(r.stringResult, name: 'xhr callback');
       });
     });
 
