@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
@@ -35,195 +36,6 @@ const HTTP_PUT = "put";
 const HTTP_HEAD = "head";
 
 enum HttpMethod { put, get, post, delete, patch, head }
-
-String _debugSendNativeCallback() {
-  if (_XHR_DEBUG) {
-    return """console.log("XMLHttpRequest._send_native_callback");
-      console.log("arguments");
-      console.log(arguments);
-      console.log(responseInfo);
-      console.log(responseText);
-      console.log(error);""";
-  } else
-    return "";
-}
-
-final String xhrJsCode = """
-function XMLHttpRequest() {
-  this._send_native = XMLHttpRequestExtension_send_native;
-  this._httpMethod = null;
-  this._url = null;
-  this._requestHeaders = [];
-  this._responseHeaders = [];
-  this.response = null;
-  this.responseText = null;
-  this.responseXML = null;
-  this.responseType = "";
-  this.onreadystatechange = null;
-  this.onloadstart = null;
-  this.onprogress = null;
-  this.onabort = null;
-  this.onerror = null;
-  this.onload = null;
-  this.onloadend = null;
-  this.ontimeout = null;
-  this.readyState = 0;
-  this.status = 0;
-  this.statusText = "";
-  this.withCredentials = null;
-};
-// readystate enum
-XMLHttpRequest.UNSENT = 0;
-XMLHttpRequest.OPENED = 1;
-XMLHttpRequest.HEADERS = 2;
-XMLHttpRequest.LOADING = 3;
-XMLHttpRequest.DONE = 4;
-XMLHttpRequest.prototype.constructor = XMLHttpRequest;
-XMLHttpRequest.prototype.open = function(httpMethod, url) {
-  this._httpMethod = httpMethod;
-  this._url = url;
-  this.readyState = XMLHttpRequest.OPENED;
-  if (typeof this.onreadystatechange === "function") {
-    //console.log("Calling onreadystatechange(OPENED)...");
-    this.onreadystatechange();
-  }
-};
-XMLHttpRequest.prototype.send = function(data) {
-  this.readyState = XMLHttpRequest.LOADING;
-  if (typeof this.onreadystatechange === "function") {
-    //console.log("Calling onreadystatechange(LOADING)...");
-    this.onreadystatechange();
-  }
-  if (typeof this.onloadstart === "function") {
-    //console.log("Calling onloadstart()...");
-    this.onloadstart();
-  }
-  var that = this;
-  this._send_native(this._httpMethod, this._url, this._requestHeaders, data || null, function(responseInfo, responseText, error) {
-    that._send_native_callback(responseInfo, responseText, error);
-  }, this);
-};
-XMLHttpRequest.prototype.abort = function() {
-  this.readyState = XMLHttpRequest.UNSENT;
-  // Note: this.onreadystatechange() is not supposed to be called according to the XHR specs
-}
-// responseInfo: {statusCode, statusText, responseHeaders}
-XMLHttpRequest.prototype._send_native_callback = function(responseInfo, responseText, error) {
-  ${_debugSendNativeCallback()}
-  if (this.readyState === XMLHttpRequest.UNSENT) {
-    console.log("XHR native callback ignored because the request has been aborted");
-    if (typeof this.onabort === "function") {
-      //console.log("Calling onabort()...");
-      this.onabort();
-    }
-    return;
-  }
-  if (this.readyState != XMLHttpRequest.LOADING) {
-    // Request was not expected
-    console.log("XHR native callback ignored because the current state is not LOADING");
-    return;
-  }
-  // Response info
-  // TODO: responseXML?
-  this.responseURL = this._url;
-  this.status = responseInfo.statusCode;
-  this.statusText = responseInfo.statusText;
-  this._responseHeaders = responseInfo.responseHeaders || [];
-  this.readyState = XMLHttpRequest.DONE;
-  // Response
-  this.response = null;
-  this.responseText = null;
-  this.responseXML = null;
-  if (error) {
-    this.responseText = error;
-  } else {
-    this.responseText = responseText;
-    //console.log('RESPONSE TEXT: ' + responseText);
-    switch (this.responseType) {
-      case "":
-      case "text":
-        this.response = this.responseText;
-        break;
-      case "arraybuffer":
-        error = "XHR arraybuffer response is not supported!";
-        break;
-      case "document":
-        this.response = this.responseText;
-        this.responseXML = this.responseText;
-        break;
-      case "json":
-        try {
-            this.response = JSON.parse(responseText);
-        }
-        catch (e) {
-            error = "Could not parse JSON response: " + responseText;
-        }
-        break;
-      default:
-        error = "Unsupported responseType: " + responseInfo.responseType;
-    }
-  }
-  this.readyState = XMLHttpRequest.DONE;
-  if (typeof this.onreadystatechange === "function") {
-    //console.log("Calling onreadystatechange(DONE)...");
-    this.onreadystatechange();
-  }
-  if (error === "timeout") {
-    // Timeout
-    console.warn("Got XHR timeout");
-    if (typeof this.ontimeout === "function") {
-      //console.log("Calling ontimeout()...");
-      this.ontimeout();
-    }
-  } else if (error) {
-    // Error
-    console.warn("Got XHR error:", error);
-    if (typeof this.onerror === "function") {
-      //console.log("Calling onerror()...");
-      this.onerror();
-    }
-  } else {
-    // Success
-    //console.log("XHR success: response =", this.response);
-    if (typeof this.onload === "function") {
-      //console.log("Calling onload()...");
-      this.onload();
-    }
-  }
-  if (typeof this.onloadend === "function") {
-    //console.log("Calling onloadend()...");
-    this.onloadend();
-  }
-};
-XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
-  this._requestHeaders.push([header, value]);
-};
-XMLHttpRequest.prototype.getAllResponseHeaders = function() {
-  var ret = "";
-  var headers = this._responseHeaders;
-  if(typeof this._responseHeaders === 'string') {
-    headers = JSON.parse(this._responseHeaders)
-  }
-  for (let i = 0; i < headers.length; i++) {
-    var keyValue = headers[i];
-    ret += keyValue[0] + ": " + keyValue[1] + "\\r\\n";
-  }
-  return ret;
-};
-XMLHttpRequest.prototype.getResponseHeader = function(name) {
-  var ret = "";
-  for (var i = 0; i < this._responseHeaders.length; i++) {
-    var keyValue = this._responseHeaders[i];
-    if (keyValue[0] !== name) continue;
-    if (ret === "") ret += ", ";
-    ret += keyValue[1];
-  }
-  return ret;
-};
-// XMLHttpRequest.prototype.overrideMimeType = function() {
-//   // TODO
-// };
-this.XMLHttpRequest = XMLHttpRequest;""";
 
 RegExp regexpHeader = RegExp("^([\\w-])+:(?!\\s*\$).+\$");
 
@@ -265,13 +77,13 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
     httpClient = httpClient ?? http.Client();
     dartContext[XHR_PENDING_CALLS_KEY] = [];
 
-    var cli = HttpClient();
+    // var cli = HttpClient();
     // cli.findProxy = (uri) {
     //   return "PROXY 192.168.31.114:7890";
     // };
     // cli.findProxy = HttpClient.findProxyFromEnvironment;
 
-    httpClient = IOClient(cli);
+    // httpClient = IOClient(cli);
     Timer.periodic(Duration(milliseconds: 40), (timer) {
       // exits if there is no pending call to remote
       if (!hasPendingXhrCalls()) return;
@@ -337,13 +149,14 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
         }
         // assuming request was successfully executed
         String responseText = utf8.decode(response.bodyBytes);
-        try {
-          responseText = jsonEncode(json.decode(responseText));
-        } on Exception {}
+        // try {
+        //   responseText = jsonEncode(json.decode(responseText));
+        // } on Exception {}
         final xhrResult = XmlHttpRequestResponse(
           responseText: responseText,
           responseInfo:
-              XhtmlHttpResponseInfo(statusCode: 200, statusText: "OK"),
+              XhtmlHttpResponseInfo(statusCode: response.statusCode, 
+                statusText: response.reasonPhrase),
         );
 
         response.headers.forEach((key, value) {
@@ -355,37 +168,18 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
         final error = xhrResult.error;
         // send back to the javascript environment the
         // response for the http pending callback
-        this.evaluate(
-          "globalThis.xhrRequests[${pendingCall.idRequest}].callback($responseInfo, `$responseText`, $error);",
+        developer.log('''
+        Got response for ${response.request?.url}
+          - id: ${pendingCall.idRequest}
+          - status code: ${response.statusCode}
+          - error: $error
+        ''', name: 'xhr');
+        final r = this.evaluate(
+          "globalThis.xhrRequests[${pendingCall.idRequest}].callback($responseInfo, ${jsonEncode(responseText)}, $error);",
         );
+        developer.log(r.stringResult, name: 'xhr callback');
       });
     });
-
-    this.evaluate("""
-    var xhrRequests = {};
-    var idRequest = -1;
-    function XMLHttpRequestExtension_send_native() {
-      idRequest += 1;
-      var cb = arguments[4];
-      var context = arguments[5];
-      xhrRequests[idRequest] = {
-        callback: function(responseInfo, responseText, error) {
-          cb(responseInfo, responseText, error);
-        }
-      };
-      var args = [];
-      args[0] = arguments[0];
-      args[1] = arguments[1];
-      args[2] = arguments[2];
-      args[3] = arguments[3];
-      args[4] = idRequest;
-      sendMessage('SendNative', JSON.stringify(args));
-    }
-    """);
-
-    final evalXhrResult = this.evaluate(xhrJsCode);
-
-    if (_XHR_DEBUG) print('RESULT evalXhrResult: $evalXhrResult');
 
     this.onMessage('SendNative', (arguments) {
       try {
