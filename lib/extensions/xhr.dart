@@ -337,7 +337,8 @@ extension JavascriptRuntimeXhrExtension on JavascriptRuntime {
             break;
         }
         // assuming request was successfully executed
-        String responseText = utf8.decode(response.bodyBytes);
+        // String responseText = utf8.decode(response.bodyBytes);
+        String responseText = response.body;
         // try {
         //   responseText = jsonEncode(json.decode(responseText));
         // } on Exception {}
